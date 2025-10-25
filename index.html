@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Secure Vault — Password Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg-1:#0b1220;
+      --bg-2:#0f1726;
+      --card:#101826;
+      --accent:#6c63ff;
+      --accent-2:#6ee7b7;
+      --glass: rgba(255,255,255,0.04);
+      --muted: rgba(226,232,240,0.6);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(108,99,255,0.08), transparent),
+                  radial-gradient(800px 400px at 90% 90%, rgba(110,231,183,0.03), transparent),
+                  linear-gradient(180deg,var(--bg-1),var(--bg-2));
+      color:#e6eef8;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:40px 20px;
+    }
+
+    /* Center card like screenshot */
+    .center-wrap{
+      width:100%;
+      max-width:420px;
+      margin:auto;
+      position:relative;
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));
+      border-radius:14px;
+      padding:26px;
+      box-shadow: 0 18px 60px rgba(2,6,23,0.6), 0 6px 18px rgba(12,18,30,0.6);
+      border: 1px solid rgba(255,255,255,0.03);
+      backdrop-filter: blur(8px);
+    }
+
+    .logo{
+      height:56px;
+      width:56px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:12px;
+      background: linear-gradient(135deg, rgba(108,99,255,0.18), rgba(110,231,183,0.06));
+      margin: 0 auto 14px;
+      box-shadow: 0 6px 20px rgba(108,99,255,0.08);
+    }
+    .logo svg{filter: drop-shadow(0 6px 18px rgba(108,99,255,0.12));}
+
+    h1{
+      text-align:center;
+      margin:0 0 8px;
+      font-size:20px;
+      letter-spacing:0.2px;
+      color: #f8fbff;
+      font-weight:700;
+    }
+    p.lead{
+      text-align:center;
+      margin:0 0 18px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    .field{
+      margin-bottom:12px;
+      position:relative;
+    }
+    input[type="password"], input[type="text"]{
+      width:100%;
+      padding:12px 12px;
+      border-radius:8px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.03);
+      color: #eaf2ff;
+      font-size:14px;
+      outline:none;
+      transition: box-shadow .18s, transform .18s;
+    }
+    input::placeholder{ color: rgba(230,238,248,0.32); }
+    input:focus{ box-shadow: 0 8px 30px rgba(108,99,255,0.06); transform: translateY(-1px); border-color: rgba(108,99,255,0.2); }
+
+    .strength {
+      display:flex;
+      gap:6px;
+      margin-top:6px;
+      align-items:center;
+    }
+    .strength-bar{
+      flex:1;
+      height:6px;
+      border-radius:6px;
+      background: rgba(255,255,255,0.03);
+      overflow:hidden;
+    }
+    .strength-bar > i{
+      display:block;
+      height:100%;
+      width:0%;
+      transition: width .3s ease, background .3s ease;
+    }
+    .strength-text{ font-size:12px; color:var(--muted); margin-left:8px; }
+
+    .btn{
+      width:100%;
+      padding:12px;
+      border-radius:10px;
+      border:none;
+      cursor:pointer;
+      font-weight:600;
+      font-size:14px;
+      color:#fff;
+      background: linear-gradient(90deg,#6c63ff,#7c8cff);
+      box-shadow: 0 8px 28px rgba(108,99,255,0.16);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.ghost{
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.04);
+      color:var(--muted);
+      box-shadow:none;
+    }
+
+    .err{ color:#ffb4b4; font-size:13px; margin-top:8px; text-align:center; }
+
+    /* Dashboard view (full app) */
+    .app-shell{
+      width:100%;
+      max-width:1100px;
+      margin:auto;
+      display:none;
+      gap:20px;
+      animation: fadeIn .4s ease;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:18px;
+    }
+    .topbar h2{ margin:0; color:#f8fbff; font-size:18px; }
+    .top-actions{ display:flex; gap:10px; align-items:center; }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:12px;
+      padding:16px;
+      border:1px solid rgba(255,255,255,0.03);
+      box-shadow: 0 12px 40px rgba(2,6,23,0.45);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 320px 1fr;
+      gap:18px;
+    }
+
+    /* add form */
+    .add-form input{ margin-bottom:10px; }
+    .add-form small{ color:var(--muted); display:block; margin-bottom:8px; }
+
+    /* list */
+    .list-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); gap:14px; margin-top:8px; }
+
+    .entry{
+      padding:12px;
+      border-radius:10px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.03);
+      box-shadow: 0 8px 30px rgba(2,6,23,0.5);
+      position:relative;
+      overflow:hidden;
+    }
+    .entry h3{ margin:0; font-size:15px; color:#eaf2ff; }
+    .entry p{ margin:6px 0 0; color:var(--muted); font-size:13px; }
+
+    .entry-actions{
+      display:flex;
+      gap:8px;
+      margin-top:10px;
+    }
+    .tiny{
+      padding:6px 8px;
+      border-radius:8px;
+      border:none;
+      cursor:pointer;
+      font-weight:600;
+      font-size:13px;
+      color:#fff;
+      background: rgba(255,255,255,0.02);
+    }
+    .tiny.copy{ color:#6c63ff; background: rgba(108,99,255,0.06); }
+    .tiny.del{ color:#ff7b7b; background: rgba(255,123,123,0.04); }
+
+    .top-right-logout{
+      background: linear-gradient(90deg,#ff8a65,#ff7043);
+      color:white;
+      padding:10px 12px;
+      border-radius:10px;
+      border:none;
+      cursor:pointer;
+      font-weight:700;
+    }
+
+    .muted{ color:var(--muted); font-size:13px; }
+
+    @media (max-width:880px){
+      .grid{ grid-template-columns: 1fr; }
+      .center-wrap{ max-width:520px }
+      .app-shell{ padding:10px;}
+    }
+    @keyframes fadeIn{ from{opacity:0; transform: translateY(8px)} to{opacity:1; transform:none} }
+  </style>
+</head>
+<body>
+
+  <!-- Centered Create/Login Card -->
+  <div class="center-wrap" id="initialScreen">
+    <div class="card" id="createCard">
+      <div class="logo" aria-hidden="true">
+        <!-- simple play-like icon -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 5v14l12-7L7 5z" fill="#6c63ff"/>
+        </svg>
+      </div>
+
+      <h1>Welcome to Secure Vault</h1>
+      <p class="lead">Create a strong master password to secure your vault.<br>This password is the only key to your data.</p>
+
+      <div class="field">
+        <input id="newPass" type="password" placeholder="Create Master Password" autocomplete="new-password" />
+      </div>
+      <div class="field">
+        <input id="confirmPass" type="password" placeholder="Confirm Master Password" autocomplete="new-password" />
+      </div>
+
+      <div style="margin-top:4px;">
+        <div style="font-size:13px;color:var(--muted);">Strength</div>
+        <div class="strength" style="margin-top:6px;">
+          <div class="strength-bar" data-index="0"><i></i></div>
+          <div class="strength-bar" data-index="1"><i></i></div>
+          <div class="strength-bar" data-index="2"><i></i></div>
+          <div class="strength-bar" data-index="3"><i></i></div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <button id="createBtn" class="btn">Create Vault</button>
+      </div>
+
+      <div id="createError" class="err" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Main App Shell (hidden until login) -->
+  <div class="app-shell" id="appShell" style="display:none; width:100%; max-width:1100px;">
+    <div class="topbar">
+      <h2>🔑 Secure Vault</h2>
+      <div class="top-actions">
+        <div class="muted" id="userHint">Vault loaded</div>
+        <button id="logoutBtn" class="top-right-logout">Log out</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Left panel: add form -->
+      <div class="panel add-panel">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="width:44px;height:44px;background:linear-gradient(135deg,#6c63ff,#7c8cff);border-radius:10px;display:flex;align-items:center;justify-content:center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L3 7v9c0 5 9 6 9 6s9-1 9-6V7l-9-5z" fill="#fff" opacity="0.95"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:700">Add New Password</div>
+            <div class="muted" style="font-size:12px">Encrypted locally with your master password</div>
+          </div>
+        </div>
+
+        <form id="addForm" class="add-form">
+          <input id="siteInput" type="text" placeholder="Website (e.g. example.com)" required />
+          <input id="userInput" type="text" placeholder="Username or Email" required />
+          <input id="passInput" type="text" placeholder="Password" required />
+          <div style="display:flex;gap:8px;">
+            <button type="submit" class="btn" style="flex:1">Save Password</button>
+            <button type="button" id="genBtn" class="btn ghost" style="width:110px">Generate</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right panel: list -->
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:700">Your Vault</div>
+            <div class="muted" id="countHint">No items yet</div>
+          </div>
+        </div>
+
+        <div id="list" class="list-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase & App Script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // ---------- Firebase config (your project) ----------
+    const firebaseConfig = {
+      apiKey: "AIzaSyAVfOzSFYA7o-EqyendFho9-Bsz7T5uuVY",
+      authDomain: "password-44da9.firebaseapp.com",
+      projectId: "password-44da9",
+      storageBucket: "password-44da9.firebasestorage.app",
+      messagingSenderId: "713514822103",
+      appId: "1:713514822103:web:d1d792aa087c77823b0392"
+    };
+
+    const fbApp = initializeApp(firebaseConfig);
+    const db = getFirestore(fbApp);
+
+    // ---------- Elements ----------
+    const newPass = document.getElementById('newPass');
+    const confirmPass = document.getElementById('confirmPass');
+    const createBtn = document.getElementById('createBtn');
+    const createError = document.getElementById('createError');
+    const strengthBars = Array.from(document.querySelectorAll('.strength-bar > i'));
+
+    const initialScreen = document.getElementById('initialScreen');
+    const appShell = document.getElementById('appShell');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const addForm = document.getElementById('addForm');
+    const siteInput = document.getElementById('siteInput');
+    const userInput = document.getElementById('userInput');
+    const passInput = document.getElementById('passInput');
+    const genBtn = document.getElementById('genBtn');
+    const listEl = document.getElementById('list');
+    const countHint = document.getElementById('countHint');
+    const userHint = document.getElementById('userHint');
+
+    // ---------- Crypto helpers (Web Crypto) ----------
+    const enc = new TextEncoder();
+    const dec = new TextDecoder();
+
+    async function deriveKey(password, saltBase64){
+      const salt = base64ToArrayBuffer(saltBase64);
+      const pwKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+      const key = await crypto.subtle.deriveKey({
+        name: 'PBKDF2',
+        salt,
+        iterations: 150000,
+        hash: 'SHA-256'
+      }, pwKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt','decrypt']);
+      return key;
+    }
+
+    function randBytes(len){
+      const b = new Uint8Array(len);
+      crypto.getRandomValues(b);
+      return b;
+    }
+    function arrayBufferToBase64(buffer){
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+    function base64ToArrayBuffer(base64){
+      const binary_string = atob(base64);
+      const len = binary_string.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = binary_string.charCodeAt(i);
+      return bytes.buffer;
+    }
+
+    async function encryptString(key, plaintext){
+      const iv = randBytes(12);
+      const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plaintext));
+      return {
+        iv: arrayBufferToBase64(iv.buffer),
+        data: arrayBufferToBase64(ciphertext)
+      };
+    }
+    async function decryptString(key, ivBase64, dataBase64){
+      try{
+        const iv = base64ToArrayBuffer(ivBase64);
+        const ct = base64ToArrayBuffer(dataBase64);
+        const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(iv) }, key, ct);
+        return dec.decode(decrypted);
+      }catch(e){
+        throw new Error('Decryption failed');
+      }
+    }
+
+    // ---------- Local vault metadata ----------
+    // saved in localStorage:
+    // vault_salt  => base64 salt
+    // vault_verifier => encrypted verifier JSON (iv + data)
+    const LS_SALT = 'vault_salt_v1';
+    const LS_VERIF = 'vault_verif_v1';
+
+    // ---------- Password strength meter ----------
+    function evaluateStrength(pw){
+      let score = 0;
+      if (pw.length >= 8) score++;
+      if (pw.length >= 12) score++;
+      if (/[0-9]/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      if (/[A-Z]/.test(pw)) score++;
+      // map score to 0..3
+      if (score <= 1) return 0;
+      if (score === 2) return 1;
+      if (score === 3) return 2;
+      return 3;
+    }
+    function renderStrength(pw){
+      const level = evaluateStrength(pw);
+      const percent = (level+1) * 25;
+      strengthBars.forEach((bar, i)=>{
+        const el = bar;
+        if (i <= level) {
+          el.style.width = '100%';
+          // color gradients depending on level
+          if (level <= 0) el.style.background = '#ff6b6b';
+          else if (level === 1) el.style.background = '#f59e0b';
+          else if (level === 2) el.style.background = '#60a5fa';
+          else el.style.background = 'linear-gradient(90deg,#6c63ff,#7c8cff)';
+        } else {
+          el.style.width = '0%';
+        }
+      });
+    }
+
+    newPass.addEventListener('input', ()=>renderStrength(newPass.value));
+
+    // ---------- Create Vault ----------
+    createBtn.addEventListener('click', async ()=>{
+      createError.style.display='none';
+      const a = newPass.value;
+      const b = confirmPass.value;
+      if (!a || a.length < 6){ showCreateError('Choose a stronger password (min 6 chars).'); return; }
+      if (a !== b){ showCreateError('Passwords do not match.'); return; }
+
+      // create salt, derive key, store a verifier
+      const saltArr = randBytes(16);
+      const saltB64 = arrayBufferToBase64(saltArr.buffer);
+      try{
+        const key = await deriveKey(a, saltB64);
+        // verifier: encrypt known phrase
+        const verifier = await encryptString(key, 'vault-verifier-v1');
+        localStorage.setItem(LS_SALT, saltB64);
+        localStorage.setItem(LS_VERIF, JSON.stringify(verifier));
+        // clear inputs
+        newPass.value = '';
+        confirmPass.value = '';
+        // login with new master
+        await onLoginWithMaster(a);
+      }catch(err){
+        console.error(err);
+        showCreateError('Unexpected error creating vault.');
+      }
+    });
+
+    function showCreateError(msg){
+      createError.style.display='block';
+      createError.textContent = msg;
+    }
+
+    // ---------- Login flow (if vault exists) ----------
+    async function tryAutoOpen(){
+      // If vault salt exists, ask user to enter master password via prompt (you can replace with proper UI if you want)
+      const salt = localStorage.getItem(LS_SALT);
+      const verif = localStorage.getItem(LS_VERIF);
+      if (!salt || !verif) return; // nothing to auto-open
+      // Show a prompt-style overlay. To keep UI consistent with screenshot, reuse initial card as login if vault exists.
+      // We'll transform the create card into a login card:
+      document.getElementById('createCard').querySelector('h1').textContent = 'Enter Vault Master Password';
+      document.querySelector('.lead').textContent = 'Enter your existing master password to unlock your vault.';
+      document.getElementById('newPass').placeholder = 'Master Password';
+      document.getElementById('confirmPass').style.display = 'none';
+      // change button
+      createBtn.textContent = 'Unlock Vault';
+      createBtn.removeEventListener('click', createBtn._createListener);
+      createBtn._createListener = async ()=>{
+        const pw = newPass.value;
+        if (!pw) return showCreateError('Enter your master password.');
+        try{
+          await onLoginWithMaster(pw);
+        }catch(e){
+          showCreateError('Incorrect master password.');
+          console.error(e);
+        }
+      };
+      createBtn.addEventListener('click', createBtn._createListener);
+    }
+
+    // ---------- Login handler ----------
+    async function onLoginWithMaster(masterPassword){
+      const salt = localStorage.getItem(LS_SALT);
+      const verifRaw = localStorage.getItem(LS_VERIF);
+      if (!salt || !verifRaw){
+        throw new Error('No vault found in local storage');
+      }
+      const verif = JSON.parse(verifRaw);
+      // derive key and test decrypt verifier
+      const key = await deriveKey(masterPassword, salt);
+      const plain = await decryptString(key, verif.iv, verif.data);
+      if (plain !== 'vault-verifier-v1') throw new Error('invalid password');
+      // success: store key in session (in-memory)
+      sessionKey = key;
+      sessionMaster = masterPassword;
+      // switch UI
+      initialScreen.style.display = 'none';
+      appShell.style.display = 'block';
+      userHint.textContent = 'Vault unlocked';
+      // load passwords
+      await loadPasswords();
+    }
+
+    // keep derived key in memory only for this session
+    let sessionKey = null;
+    let sessionMaster = null;
+
+    // ---------- Add / Save ----------
+
+    addForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if (!sessionKey) { alert('Vault locked.'); return; }
+      const site = siteInput.value.trim();
+      const user = userInput.value.trim();
+      const pass = passInput.value.trim();
+      if (!site || !user || !pass) return;
+
+      try{
+        // encrypt password string
+        const encObj = await encryptString(sessionKey, pass);
+        // store site, username, encrypted data + iv in Firestore
+        await addDoc(collection(db, "passwords"), {
+          site, username: user, cipher: encObj.data, iv: encObj.iv, createdAt: new Date().toISOString()
+        });
+        siteInput.value = ''; userInput.value=''; passInput.value='';
+        await loadPasswords();
+      }catch(err){
+        console.error(err);
+        alert('Failed to save. See console.');
+      }
+    });
+
+    // generate password helper
+    genBtn.addEventListener('click', ()=>{
+      passInput.value = generatePassword(14);
+    });
+    function generatePassword(len=12){
+      const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_+=<>?";
+      let out = '';
+      const arr = new Uint32Array(len);
+      crypto.getRandomValues(arr);
+      for(let i=0;i<len;i++) out += chars[arr[i] % chars.length];
+      return out;
+    }
+
+    // ---------- Load and display ----------
+    async function loadPasswords(){
+      listEl.innerHTML = '';
+      try{
+        const q = query(collection(db, "passwords"), /*orderBy?*/);
+        const snapshot = await getDocs(collection(db, "passwords"));
+        if (snapshot.empty){
+          countHint.textContent = 'No passwords stored yet';
+          return;
+        }
+        const docs = [];
+        snapshot.forEach(d => docs.push({ id: d.id, ...d.data() }));
+        countHint.textContent = `${docs.length} item(s) in vault`;
+        // Create cards
+        docs.reverse().forEach(item => {
+          const el = document.createElement('div');
+          el.className = 'entry';
+          el.innerHTML = `
+            <h3>🌐 ${escapeHtml(item.site)}</h3>
+            <p>👤 ${escapeHtml(item.username)}</p>
+            <p class="muted">🔒 <span class="pass-visual">********</span></p>
+            <div class="entry-actions">
+              <button class="tiny copy">Copy</button>
+              <button class="tiny show">Show</button>
+              <button class="tiny del">Delete</button>
+            </div>
+          `;
+
+          // actions
+          const copyBtn = el.querySelector('.copy');
+          const showBtn = el.querySelector('.show');
+          const delBtn = el.querySelector('.del');
+          const passVis = el.querySelector('.pass-visual');
+
+          copyBtn.addEventListener('click', async ()=>{
+            try{
+              const decrypted = await decryptString(sessionKey, item.iv, item.cipher);
+              await navigator.clipboard.writeText(decrypted);
+              copyBtn.textContent = '✅ Copied';
+              setTimeout(()=>copyBtn.textContent='Copy',1400);
+            }catch(e){ alert('Decrypt failed'); console.error(e); }
+          });
+
+          showBtn.addEventListener('click', async ()=>{
+            if (showBtn.dataset.shown === '1'){
+              passVis.textContent = '********';
+              showBtn.textContent = 'Show';
+              showBtn.dataset.shown = '0';
+              return;
+            }
+            try{
+              const decrypted = await decryptString(sessionKey, item.iv, item.cipher);
+              passVis.textContent = decrypted;
+              showBtn.textContent = 'Hide';
+              showBtn.dataset.shown = '1';
+            }catch(e){ alert('Decrypt failed'); console.error(e); }
+          });
+
+          delBtn.addEventListener('click', async ()=>{
+            if (!confirm('Delete this entry?')) return;
+            await deleteDoc(doc(db, "passwords", item.id));
+            await loadPasswords();
+          });
+
+          listEl.appendChild(el);
+        });
+
+      }catch(err){
+        console.error('Load error', err);
+      }
+    }
+
+    // ---------- Logout ----------
+    logoutBtn.addEventListener('click', ()=>{
+      sessionKey = null;
+      sessionMaster = null;
+      appShell.style.display = 'none';
+      initialScreen.style.display = 'block';
+      // revert create card UI to unlock behavior if vault exists
+      if (localStorage.getItem(LS_SALT)){
+        document.getElementById('createCard').querySelector('h1').textContent = 'Enter Vault Master Password';
+        document.querySelector('.lead').textContent = 'Enter your existing master password to unlock your vault.';
+        document.getElementById('newPass').placeholder = 'Master Password';
+        document.getElementById('confirmPass').style.display = 'none';
+        createBtn.textContent = 'Unlock Vault';
+      } else {
+        // new vault
+        document.getElementById('createCard').querySelector('h1').textContent = 'Welcome to Secure Vault';
+        document.querySelector('.lead').textContent = 'Create a strong master password to secure your vault. This password is the only key to your data.';
+        document.getElementById('newPass').placeholder = 'Create Master Password';
+        document.getElementById('confirmPass').style.display = 'block';
+        createBtn.textContent = 'Create Vault';
+      }
+    });
+
+    // ---------- small helpers ----------
+    function escapeHtml(s){
+      return String(s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    // run at load: set up unlock flow if vault present
+    (function init(){
+      // if vault exists, adapt UI and prepare unlock handler
+      if (localStorage.getItem(LS_SALT)){
+        // adapt UI to login
+        document.getElementById('createCard').querySelector('h1').textContent = 'Enter Vault Master Password';
+        document.querySelector('.lead').textContent = 'Enter your existing master password to unlock your vault.';
+        document.getElementById('newPass').placeholder = 'Master Password';
+        document.getElementById('confirmPass').style.display = 'none';
+        createBtn.textContent = 'Unlock Vault';
+        // attach listener
+        createBtn._createListener = async ()=>{
+          const pw = newPass.value;
+          if (!pw) return showCreateError('Enter your master password.');
+          try{
+            await onLoginWithMaster(pw);
+          }catch(e){
+            showCreateError('Incorrect master password.');
+            console.error(e);
+          }
+        };
+        createBtn.addEventListener('click', createBtn._createListener);
+      } else {
+        // normal create flow
+        createBtn._createListener = null;
+        // keep default listener (attached earlier)
+        createBtn.addEventListener('click', ()=>{}); // placeholder to keep click active
+      }
+    })();
+
+  </script>
+</body>
+</html>
